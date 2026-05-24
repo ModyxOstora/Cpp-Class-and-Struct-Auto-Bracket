@@ -4,6 +4,13 @@
   "description": "Automatically closes class/struct/enum/namespace blocks with }; when pressing Shift+[",
   "version": "1.2.3",
   "publisher": "MoayadBedair",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ModyxOstora/Cpp-Class-and-Struct-Auto-Bracket.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ModyxOstora/Cpp-Class-and-Struct-Auto-Bracket/issues"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
