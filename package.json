@@ -1,0 +1,63 @@
+{
+  "name": "cpp-class-bracket",
+  "displayName": "C++ Class/Struct Auto Bracket",
+  "description": "Automatically closes class/struct/enum/namespace blocks with }; when pressing Shift+[",
+  "version": "1.2.3",
+  "publisher": "MoayadBedair",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cpp-class-bracket.toggleInlineMode",
+        "title": "C++ Auto Bracket: Toggle Inline Mode"
+      }
+    ],
+    "configuration": {
+      "title": "C++ Class/Struct Auto Bracket",
+      "properties": {
+        "cppClassBracket.inlineMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, inserts {}; with the cursor between { and } instead of expanding to multiple lines."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "key": "shift+[",
+        "command": "cpp-class-bracket.insertClassBracket",
+        "when": "editorTextFocus && editorLangId == cpp"
+      },
+      {
+        "key": "shift+[",
+        "command": "cpp-class-bracket.insertClassBracket",
+        "when": "editorTextFocus && editorLangId == c"
+      },
+      {
+        "key": "backspace",
+        "command": "cpp-class-bracket.smartBackspace",
+        "when": "editorTextFocus && editorLangId == cpp"
+      },
+      {
+        "key": "backspace",
+        "command": "cpp-class-bracket.smartBackspace",
+        "when": "editorTextFocus && editorLangId == c"
+      },
+      {
+        "key": "ctrl+shift+;",
+        "command": "cpp-class-bracket.toggleInlineMode",
+        "when": "editorLangId == cpp || editorLangId == c"
+      }
+    ]
+  }
+}
