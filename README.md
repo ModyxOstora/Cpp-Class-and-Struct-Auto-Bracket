@@ -115,6 +115,8 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 - **Forward declarations ignored:** `class Foo;` → native `{` ✅
 - **Already opened blocks ignored:** `class Foo {` → native `{` ✅
 - **Cursor in middle of word:** `cl|ass Foo` → native `{` ✅
+- **Cursor right after keyword:** `class| Foo` → native `{` ✅
+- **Comments ignored:** declarations inside `//` or `/* */` comments don't trigger the extension ✅
 - **Text selected:** falls through to VS Code native behavior ✅
 - **Multiple cursors:** all handled simultaneously ✅
 - **Tab vs spaces:** respects your VS Code `editor.tabSize` and `editor.insertSpaces` settings ✅
@@ -126,6 +128,7 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 | Shortcut | Action |
 |---|---|
 | `Shift+[` | Insert `{};` block or native `{` |
+| `Shift+Alt+[` | Force insert `{};` block regardless of declaration detection |
 | `Backspace` | Smart delete empty `{};` or normal backspace |
 | `Ctrl+Shift+;` | Toggle inline mode |
 
@@ -140,7 +143,7 @@ Search for **"C++ Class/Struct Auto Bracket"** in the Extensions panel (`Ctrl+Sh
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.3.vsix
+code --install-extension cpp-class-bracket-1.2.6.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -154,6 +157,18 @@ Or drag the `.vsix` file directly into the Extensions panel.
 ---
 
 ## Release Notes
+
+### 1.2.6
+- Fixed cursor right after keyword triggering the extension (e.g. `class| Foo`)
+- Fixed cursor in middle of word triggering the extension (e.g. `cla|ss c`)
+- Fixed non-declaration lines like `int main()` below a class triggering the extension
+- Fixed trailing `}` on the current line causing incorrect detection
+- Comments are now stripped before evaluation — declarations inside `//` or `/* */` no longer cause false positives
+- Improved block boundary detection with cleaner internal logic
+- Fixed multi-cursor position restoration when multiple cursors are active
+
+### 1.2.4 — 1.2.5
+- Icon updates
 
 ### 1.2.3
 - Fixed template and macro declarations not triggering the extension

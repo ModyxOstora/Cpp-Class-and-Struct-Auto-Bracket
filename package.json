@@ -1,8 +1,8 @@
 {
   "name": "cpp-class-bracket",
   "displayName": "C++ Class/Struct Auto Bracket",
-  "description": "Automatically closes class/struct/enum/namespace blocks with }; when pressing Shift+[",
-  "version": "1.2.5",
+  "description": "Automatically closes class/struct/enum blocks with }; when pressing Shift+[",
+  "version": "1.2.6",
   "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {
@@ -18,13 +18,21 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onLanguage:cpp",
-    "onLanguage:c"
-  ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "cpp-class-bracket.insertClassBracket",
+        "title": "C++ Auto Bracket: Insert Bracket"
+      },
+      {
+        "command": "cpp-class-bracket.forceInsertClassBracket",
+        "title": "C++ Auto Bracket: Force Insert Bracket (Override)"
+      },
+      {
+        "command": "cpp-class-bracket.smartBackspace",
+        "title": "C++ Auto Bracket: Smart Backspace"
+      },
       {
         "command": "cpp-class-bracket.toggleInlineMode",
         "title": "C++ Auto Bracket: Toggle Inline Mode"
@@ -44,27 +52,22 @@
       {
         "key": "shift+[",
         "command": "cpp-class-bracket.insertClassBracket",
-        "when": "editorTextFocus && editorLangId == cpp"
+        "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
-        "key": "shift+[",
-        "command": "cpp-class-bracket.insertClassBracket",
-        "when": "editorTextFocus && editorLangId == c"
-      },
-      {
-        "key": "backspace",
-        "command": "cpp-class-bracket.smartBackspace",
-        "when": "editorTextFocus && editorLangId == cpp"
+        "key": "shift+alt+[",
+        "command": "cpp-class-bracket.forceInsertClassBracket",
+        "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
         "key": "backspace",
         "command": "cpp-class-bracket.smartBackspace",
-        "when": "editorTextFocus && editorLangId == c"
+        "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
         "key": "ctrl+shift+;",
         "command": "cpp-class-bracket.toggleInlineMode",
-        "when": "editorLangId == cpp || editorLangId == c"
+        "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       }
     ]
   }
