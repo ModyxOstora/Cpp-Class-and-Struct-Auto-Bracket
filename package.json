@@ -2,7 +2,8 @@
   "name": "cpp-class-bracket",
   "displayName": "C++ Class/Struct Auto Bracket",
   "description": "Automatically closes class/struct/enum/namespace blocks with }; when pressing Shift+[",
-  "version": "1.2.3",
+  "version": "1.2.4",
+  "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {
     "type": "git",
