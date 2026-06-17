@@ -6,11 +6,70 @@ function positionKey(uri, position) {
 	return `${uri}:${position.line}:${position.character}`;
 }
 
-// FIX: Helper to strip comments to prevent false positives
 function stripComments(line) {
 	return line
 		.replace(/\/\*[\s\S]*?\*\//g, '')
 		.replace(/\/\/.*$/, '');
+}
+
+// Safely removes template arguments (including nested ones) to allow the regex to parse base classes easily
+function stripTemplateArgs(text) {
+	let result = '';
+	let depth = 0;
+	for (let i = 0; i < text.length; i++) {
+		if (text[i] === '<') {
+			depth++;
+		} else if (text[i] === '>') {
+			if (depth > 0) depth--;
+		} else if (depth === 0) {
+			result += text[i];
+		}
+	}
+	return result;
+}
+
+// Precise scanner to check if the cursor character is inside a comment or string literal
+function isCursorInCommentOrString(lineText, charIndex) {
+	let inString = false;
+	let stringQuote = '';
+	let inBlockComment = false;
+
+	for (let i = 0; i < charIndex; i++) {
+		const char = lineText[i];
+		const nextChar = lineText[i + 1];
+
+		if (inBlockComment) {
+			if (char === '*' && nextChar === '/') {
+				inBlockComment = false;
+				i++;
+			}
+			continue;
+		}
+
+		if (inString) {
+			if (char === '\\') {
+				i++;
+			} else if (char === stringQuote) {
+				inString = false;
+			}
+			continue;
+		}
+
+		if (char === '/' && nextChar === '/') return true;
+
+		if (char === '/' && nextChar === '*') {
+			inBlockComment = true;
+			i++;
+			continue;
+		}
+
+		if (char === '"' || char === "'") {
+			inString = true;
+			stringQuote = char;
+			continue;
+		}
+	}
+	return inBlockComment || inString;
 }
 
 function getIndentUnit(editor) {
@@ -22,14 +81,49 @@ function getIndentUnit(editor) {
 	return '\t';
 }
 
-function findUnclosedDeclaration(document, cursor) {
+// OPTIMIZED: Uses allLines cache and memoization to prevent duplicate scanning per line.
+// NOTE: memo caches DETECTION result only (does class exist above?), not cursor character.
+// Multiple cursors on the same line correctly share the detection result but each get
+// their own insertion at their individual character positions.
+function findUnclosedDeclaration(cursor, allLines, memo) {
 	const currentLineNum = cursor.line;
-	let currentLineText = document.lineAt(currentLineNum).text;
 
-	// Boundary check
+	// Check if we already scanned this line number — reuse detection result.
+	// Safe because detection depends on line content and context, not cursor character.
+	if (memo.has(currentLineNum)) return memo.get(currentLineNum);
+
+	const currentLineText = allLines[currentLineNum];
+
+	// 1. Abort if cursor is inside a comment or string literal
+	if (isCursorInCommentOrString(currentLineText, cursor.character)) {
+		memo.set(currentLineNum, null); return null;
+	}
+
+	// 2. GLOBAL GUARDRAIL: Prevent triggering mid-word or mid-line on ANY line.
+	// Applied to all lines — fixes int m|ain() below a class triggering.
+	const textAfterCursor = stripComments(currentLineText.substring(cursor.character)).trim();
+	if (textAfterCursor.length > 0) {
+		memo.set(currentLineNum, null); return null;
+	}
+
+	const textBeforeCursorClean = stripComments(currentLineText.substring(0, cursor.character));
+	const isDeclarationOnCurrentLine = /(class|struct|enum)\b/.test(textBeforeCursorClean);
+
+	if (!isDeclarationOnCurrentLine) {
+		const textWithoutTemplates = stripTemplateArgs(textBeforeCursorClean);
+		// Strict match: supports namespaces ([\w:]+) and stripped templates.
+		// Parentheses excluded from [^;{()] — rejects int main(), void foo() etc.
+		// since parentheses never appear in valid inheritance continuation lines.
+		const validInheritanceLineRegex = /^\s*(:\s*)?((public|protected|private)\s+)?[\w:]+(\s*,\s*((public|protected|private)\s+)?[\w:]+)*\s*$/;
+		if (textBeforeCursorClean.trim() !== '' && !validInheritanceLineRegex.test(textWithoutTemplates)) {
+			memo.set(currentLineNum, null); return null;
+		}
+	}
+
+	// Boundary check: cursor is past a closing brace on the same line
 	const lastBraceRawIndex = currentLineText.lastIndexOf('}');
 	if (lastBraceRawIndex !== -1 && cursor.character > lastBraceRawIndex) {
-		return null;
+		memo.set(currentLineNum, null); return null;
 	}
 
 	let cleanCurrentLine = currentLineText;
@@ -38,22 +132,24 @@ function findUnclosedDeclaration(document, cursor) {
 		cleanCurrentLine = cleanCurrentLine.substring(0, lastBraceIndex);
 	}
 
-	const lines = [];
+	const linesToEval = [];
 	const inheritanceRegex = /^\s*(:\s*)?(public|protected|private)\b/;
 	let foundDeclaration = false;
 	let crossedBlockBoundary = false;
 
-	// Parser loop with comment stripping
-	for (let i = currentLineNum; i >= 0; i--) {
-		let line = (i === currentLineNum) ? cleanCurrentLine : document.lineAt(i).text;
-		line = stripComments(line); // Cleaned before evaluation
+	// HARD GUARDRAIL: Only scan up to 30 lines back.
+	const lookbackLimit = Math.max(0, currentLineNum - 30);
+
+	for (let i = currentLineNum; i >= lookbackLimit; i--) {
+		let line = (i === currentLineNum) ? cleanCurrentLine : allLines[i];
+		line = stripComments(line);
 
 		if (i < currentLineNum && line.includes('{') && !/(class|struct|enum)\b/.test(line) && !foundDeclaration) {
 			crossedBlockBoundary = true;
 			break;
 		}
 
-		lines.unshift(line);
+		linesToEval.push(line);
 
 		if (/(class|struct|enum)\b/.test(line)) {
 			foundDeclaration = true;
@@ -69,41 +165,43 @@ function findUnclosedDeclaration(document, cursor) {
 		}
 	}
 
-	if (crossedBlockBoundary || !foundDeclaration) return null;
+	if (crossedBlockBoundary || !foundDeclaration) {
+		memo.set(currentLineNum, null); return null;
+	}
 
-	const joined = lines.join(' ').replace(/\s+/g, ' ').trim();
+	linesToEval.reverse();
+	const joined = linesToEval.join(' ').replace(/\s+/g, ' ').trim();
 
-	// Matcher for keywords: handles class, struct, enum, enum class, enum struct
 	const baseKeywordRegex = /(class|struct|enum(\s+(class|struct))?)\b/;
 	const keywordMatch = joined.search(baseKeywordRegex);
-	if (keywordMatch === -1) return null;
+	if (keywordMatch === -1) {
+		memo.set(currentLineNum, null); return null;
+	}
 
-	// VALIDATION RULES (FIXED STYLE FROM BOTTOM VERSION):
 	const hasIdentifier = /(class|struct|enum(\s+(class|struct))?)\s+\w+/.test(joined);
 	const isTypedef = /\btypedef\s+(struct|class)\b/.test(joined);
 	const isModernEnumKeyword = /\benum\s+(class|struct)\s*$/.test(joined);
 
-	if (!hasIdentifier && !isTypedef && !isModernEnumKeyword) return null;
-	if (joined.endsWith(';')) return null;
-	if (joined.indexOf('{', keywordMatch) !== -1) return null;
-	if (joined.substring(keywordMatch).includes('}')) return null;
-
-	// Check cursor position against cleaned line
-	const isCurrentLineDeclaration = baseKeywordRegex.test(stripComments(cleanCurrentLine));
-	if (isCurrentLineDeclaration) {
-		const textAfterCursor = stripComments(cleanCurrentLine.substring(cursor.character)).trim();
-		if (textAfterCursor.length > 0) return null;
+	if (!hasIdentifier && !isTypedef && !isModernEnumKeyword) {
+		memo.set(currentLineNum, null); return null;
 	}
+	if (joined.endsWith(';')) { memo.set(currentLineNum, null); return null; }
+	if (joined.indexOf('{', keywordMatch) !== -1) { memo.set(currentLineNum, null); return null; }
+	if (joined.substring(keywordMatch).includes('}')) { memo.set(currentLineNum, null); return null; }
 
-	const declarationLine = lines.find(l => baseKeywordRegex.test(l));
+	const isCurrentLineDeclaration = baseKeywordRegex.test(stripComments(cleanCurrentLine));
+	const declarationLine = linesToEval.find(l => baseKeywordRegex.test(l));
 	const indentMatch = declarationLine ? declarationLine.match(/^(\s*)/) : null;
 	const declarationIndent = indentMatch ? indentMatch[1] : '';
 
-	return {
+	const result = {
 		declarationIndent,
 		isOnDeclarationLine: isCurrentLineDeclaration,
 		currentLineIsEmpty: stripComments(cleanCurrentLine).trim() === ''
 	};
+
+	memo.set(currentLineNum, result);
+	return result;
 }
 
 function activate(context) {
@@ -131,67 +229,147 @@ function activate(context) {
 		const inlineMode = config.get('inlineMode', false);
 		const indentUnit = getIndentUnit(editor);
 
-		const editInfos = selections.map((s, originalIndex) => {
-			const result = findUnclosedDeclaration(document, s.active);
-			if (!result) return null;
-			return { ...result, cursor: s.active, currentLineNum: s.active.line, originalIndex };
-		}).filter(Boolean);
+		// INSTANT CACHE: Get the whole document text at once — avoids per-line IPC calls.
+		const allLines = document.getText().split(/\r?\n/);
+		const processingMemo = new Map();
 
-		if (editInfos.length === 0) {
+		const editInfos = selections.map((s, originalIndex) => {
+			const result = findUnclosedDeclaration(s.active, allLines, processingMemo);
+			if (!result) {
+				return { isClass: false, cursor: s.active, currentLineNum: s.active.line, originalIndex };
+			}
+			return { isClass: true, ...result, cursor: s.active, currentLineNum: s.active.line, originalIndex };
+		});
+
+		// If zero cursors matched a declaration, fall through entirely to native VS Code behavior
+		if (editInfos.every(info => !info.isClass)) {
 			vscode.commands.executeCommand('default:type', { text: '{' });
 			return;
 		}
 
+		// Count how many cursors share each line — needed to decide replace vs insert below
+		const cursorsPerLine = new Map();
+		for (const info of editInfos) {
+			if (info.isClass) {
+				cursorsPerLine.set(info.currentLineNum, (cursorsPerLine.get(info.currentLineNum) || 0) + 1);
+			}
+		}
+
+		// Sort bottom-to-top for safe structural insertions (avoids line number shifting)
 		const sortedEditInfos = [...editInfos].sort((a, b) => b.currentLineNum - a.currentLineNum);
 		const finalPositionsMap = new Map();
 
+		// Track which empty lines have already been replaced so we don't do it twice
+		const linesReplaced = new Set();
+
 		editor.edit(editBuilder => {
 			for (const info of sortedEditInfos) {
-				const { declarationIndent, isOnDeclarationLine, currentLineIsEmpty, cursor, currentLineNum, originalIndex } = info;
-				const currentLineText = document.lineAt(currentLineNum).text;
+				const { isClass, cursor, currentLineNum, originalIndex } = info;
+				const currentLineText = allLines[currentLineNum];
 				let targetLineNumber = currentLineNum;
 				let targetCharPosition = 0;
 
-				if (inlineMode) {
-					if (currentLineText.trim() === '') {
-						editBuilder.replace(document.lineAt(currentLineNum).range, declarationIndent + '{};');
-						targetCharPosition = declarationIndent.length + 1;
+				if (isClass) {
+					const { declarationIndent, isOnDeclarationLine, currentLineIsEmpty } = info;
+
+					// FIX: If multiple cursors share the same empty line below a declaration,
+					// treat every cursor as an inline insert at their character position.
+					// Replacing the line once and ignoring the rest caused a freeze/no-op.
+					const multipleCursorsOnLine = (cursorsPerLine.get(currentLineNum) || 1) > 1;
+
+					if (inlineMode) {
+						if (currentLineText.trim() === '' && !multipleCursorsOnLine) {
+							// Single cursor on empty line — replace whole line with indented {};
+							if (!linesReplaced.has(currentLineNum)) {
+								editBuilder.replace(document.lineAt(currentLineNum).range, declarationIndent + '{};');
+								linesReplaced.add(currentLineNum);
+							}
+							targetCharPosition = declarationIndent.length + 1;
+						} else {
+							// Multiple cursors on empty line OR cursor on non-empty line — insert at cursor
+							editBuilder.insert(cursor, '{};');
+							targetCharPosition = cursor.character + 1;
+						}
 					} else {
-						editBuilder.insert(cursor, '{};');
-						targetCharPosition = cursor.character + 1;
+						if (isOnDeclarationLine) {
+							editBuilder.insert(cursor, '{\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
+							targetLineNumber = cursor.line + 1;
+							targetCharPosition = declarationIndent.length + indentUnit.length;
+						} else if (currentLineIsEmpty && !multipleCursorsOnLine) {
+							// Single cursor on empty line — replace whole line cleanly
+							if (!linesReplaced.has(currentLineNum)) {
+								editBuilder.replace(document.lineAt(currentLineNum).range, declarationIndent + '{\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
+								linesReplaced.add(currentLineNum);
+							}
+							targetLineNumber = currentLineNum + 1;
+							targetCharPosition = declarationIndent.length + indentUnit.length;
+						} else {
+							// Multiple cursors on empty line OR cursor on non-empty continuation line
+							// Insert inline at cursor position
+							editBuilder.insert(cursor, '{};');
+							targetCharPosition = cursor.character + 1;
+						}
 					}
 				} else {
-					if (isOnDeclarationLine) {
-						editBuilder.insert(cursor, '{\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
-						targetLineNumber = cursor.line + 1;
-						targetCharPosition = declarationIndent.length + indentUnit.length;
-					} else if (currentLineIsEmpty) {
-						editBuilder.replace(document.lineAt(currentLineNum).range, declarationIndent + '{\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
-						targetLineNumber = currentLineNum + 1;
-						targetCharPosition = declarationIndent.length + indentUnit.length;
-					} else {
-						editBuilder.insert(cursor, ' {\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
-						targetLineNumber = cursor.line + 1;
-						targetCharPosition = declarationIndent.length + indentUnit.length;
-					}
+					// Non-declaration cursor: insert {} so the cursor isn't left abandoned.
+					// editor.edit() bypasses VS Code's auto-pair pipeline, so we insert {} not {.
+					editBuilder.insert(cursor, '{}');
+					targetLineNumber = currentLineNum;
+					targetCharPosition = cursor.character + 1;
 				}
-				finalPositionsMap.set(originalIndex, new vscode.Position(targetLineNumber, targetCharPosition));
+
+				finalPositionsMap.set(originalIndex, { targetLineNumber, targetCharPosition, isClass });
 			}
-		}).then(() => {
-			const topToBottomInfos = [...editInfos].sort((a, b) => a.currentLineNum - b.currentLineNum);
+		}).then((success) => {
+			if (!success) return;
+
+			// Re-sort top-to-bottom, left-to-right to apply line/char offsets correctly
+			const topToBottomInfos = [...editInfos].sort((a, b) => {
+				if (a.currentLineNum === b.currentLineNum) {
+					return a.cursor.character - b.cursor.character;
+				}
+				return a.currentLineNum - b.currentLineNum;
+			});
+
 			let lineOffset = 0;
+			let lastProcessedLineNum = -1;
+			let charOffset = 0;
 			const orderedSelections = [];
 
 			for (const info of topToBottomInfos) {
 				const computedPos = finalPositionsMap.get(info.originalIndex);
-				const adjustedPosition = new vscode.Position(computedPos.line + lineOffset, computedPos.character);
-				if (!inlineMode) lineOffset += 2;
-				else {
-					const key = positionKey(document.uri.toString(), adjustedPosition);
-					inlineBracketPositions.set(key, '};');
+
+				// Reset char offset when moving to a new line
+				if (info.currentLineNum !== lastProcessedLineNum) {
+					charOffset = 0;
+					lastProcessedLineNum = info.currentLineNum;
 				}
+
+				let targetLineNumber = computedPos.targetLineNumber + lineOffset;
+				let targetCharPosition = computedPos.targetCharPosition;
+
+				// Apply charOffset only if cursor stayed on its original line (inline insert)
+				if (computedPos.targetLineNumber === info.currentLineNum) {
+					targetCharPosition += charOffset;
+				}
+
+				const adjustedPosition = new vscode.Position(targetLineNumber, targetCharPosition);
+
+				if (computedPos.isClass) {
+					if (!inlineMode) {
+						lineOffset += 2;
+					} else {
+						const key = positionKey(document.uri.toString(), adjustedPosition);
+						inlineBracketPositions.set(key, '};');
+						charOffset += 3;
+					}
+				} else {
+					charOffset += 2;
+				}
+
 				orderedSelections.push({ index: info.originalIndex, selection: new vscode.Selection(adjustedPosition, adjustedPosition) });
 			}
+
 			orderedSelections.sort((a, b) => a.index - b.index);
 			editor.selections = orderedSelections.map(item => item.selection);
 			if (editor.selections.length > 0) editor.revealRange(new vscode.Range(editor.selections[0].active, editor.selections[0].active));
@@ -238,20 +416,43 @@ function activate(context) {
 		}).then(() => {
 			const topToBottom = [...selections]
 				.map((s, idx) => ({ selection: s, originalIndex: idx }))
-				.sort((a, b) => a.selection.active.line - b.selection.active.line);
+				.sort((a, b) => {
+					if (a.selection.active.line === b.selection.active.line) {
+						return a.selection.active.character - b.selection.active.character;
+					}
+					return a.selection.active.line - b.selection.active.line;
+				});
 
 			let lineOffset = 0;
+			let lastProcessedLineNum = -1;
+			let charOffset = 0;
 			const orderedSelections = [];
 
 			for (const item of topToBottom) {
 				const computedPos = finalPositionsMap.get(item.originalIndex);
-				const adjustedPosition = new vscode.Position(computedPos.line + lineOffset, computedPos.character);
 
-				if (!inlineMode) lineOffset += 2;
-				else {
+				if (item.selection.active.line !== lastProcessedLineNum) {
+					charOffset = 0;
+					lastProcessedLineNum = item.selection.active.line;
+				}
+
+				let targetLineNumber = computedPos.line + lineOffset;
+				let targetCharPosition = computedPos.character;
+
+				if (computedPos.line === item.selection.active.line) {
+					targetCharPosition += charOffset;
+				}
+
+				const adjustedPosition = new vscode.Position(targetLineNumber, targetCharPosition);
+
+				if (!inlineMode) {
+					lineOffset += 2;
+				} else {
 					const key = positionKey(document.uri.toString(), adjustedPosition);
 					inlineBracketPositions.set(key, '};');
+					charOffset += 3;
 				}
+
 				orderedSelections.push({ index: item.originalIndex, selection: new vscode.Selection(adjustedPosition, adjustedPosition) });
 			}
 			orderedSelections.sort((a, b) => a.index - b.index);
@@ -320,8 +521,16 @@ function activate(context) {
 	}
 
 	updateStatusBar();
-	context.subscriptions.push(bracketCommand, forceBracketCommand, toggleCommand, backspaceCommand, statusBar, changeDisposable,
-		vscode.window.onDidChangeActiveTextEditor(updateStatusBar), vscode.workspace.onDidChangeConfiguration(updateStatusBar));
+	context.subscriptions.push(
+		bracketCommand,
+		forceBracketCommand,
+		toggleCommand,
+		backspaceCommand,
+		statusBar,
+		changeDisposable,
+		vscode.window.onDidChangeActiveTextEditor(updateStatusBar),
+		vscode.workspace.onDidChangeConfiguration(updateStatusBar),
+	);
 }
 
 function deactivate() { }

@@ -2,7 +2,7 @@
   "name": "cpp-class-bracket",
   "displayName": "C++ Class/Struct Auto Bracket",
   "description": "Automatically closes class/struct/enum blocks with }; when pressing Shift+[",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {
@@ -16,9 +16,14 @@
     "vscode": "^1.75.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Snippets"
   ],
   "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c"
+  ],
   "contributes": {
     "commands": [
       {

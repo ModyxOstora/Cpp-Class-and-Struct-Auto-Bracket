@@ -116,9 +116,14 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 - **Already opened blocks ignored:** `class Foo {` → native `{` ✅
 - **Cursor in middle of word:** `cl|ass Foo` → native `{` ✅
 - **Cursor right after keyword:** `class| Foo` → native `{` ✅
-- **Comments ignored:** declarations inside `//` or `/* */` comments don't trigger the extension ✅
+- **Function signatures ignored:** `int main()` below a class → native `{` ✅
+- **Comments ignored:** cursor inside `//` or `/* */` → native `{` ✅
+- **Cursor inside string literal:** `string s = "cl|ass Foo"` → native `{` ✅
+- **No declaration anywhere:** if no cursor matches a declaration, falls through entirely to VS Code's native `{` with auto-pairing ✅
 - **Text selected:** falls through to VS Code native behavior ✅
-- **Multiple cursors:** all handled simultaneously ✅
+- **Multiple cursors on different lines:** all handled simultaneously ✅
+- **Multiple cursors on the same empty line:** each gets its own `{};` inline ✅
+- **Mixed cursors:** declaration cursors get `{};`, non-declaration cursors get `{}` ✅
 - **Tab vs spaces:** respects your VS Code `editor.tabSize` and `editor.insertSpaces` settings ✅
 
 ---
@@ -128,7 +133,7 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 | Shortcut | Action |
 |---|---|
 | `Shift+[` | Insert `{};` block or native `{` |
-| `Shift+Alt+[` | Force insert `{};` block regardless of declaration detection |
+| `Shift+Alt+[` | Force insert a block regardless of declaration detection (respects Inline/Expanded mode) |
 | `Backspace` | Smart delete empty `{};` or normal backspace |
 | `Ctrl+Shift+;` | Toggle inline mode |
 
@@ -143,7 +148,7 @@ Search for **"C++ Class/Struct Auto Bracket"** in the Extensions panel (`Ctrl+Sh
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.6.vsix
+code --install-extension cpp-class-bracket-1.2.7.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -158,12 +163,21 @@ Or drag the `.vsix` file directly into the Extensions panel.
 
 ## Release Notes
 
+### 1.2.7
+- Fixed freeze/no-op when multiple cursors are on the same empty line below a declaration — each cursor now correctly gets its own `{};` inserted at its position
+- Fixed `int main()` and other function signatures below a class incorrectly triggering the extension
+- Fixed cursor inside string literals (e.g. `string s = "cl|ass Foo"`) incorrectly triggering the extension
+- Fixed cursor inside block comments `/* */` incorrectly triggering the extension
+- Improved multi-cursor handling — non-declaration cursors correctly receive native `{}` in the same edit transaction
+- Added memoization and full document line cache for faster detection with many cursors
+- Added 30-line lookback hard limit to prevent unnecessary scanning in large files
+
 ### 1.2.6
 - Fixed cursor right after keyword triggering the extension (e.g. `class| Foo`)
 - Fixed cursor in middle of word triggering the extension (e.g. `cla|ss c`)
 - Fixed non-declaration lines like `int main()` below a class triggering the extension
 - Fixed trailing `}` on the current line causing incorrect detection
-- Comments are now stripped before evaluation — declarations inside `//` or `/* */` no longer cause false positives
+- Comments are now stripped before evaluation — declarations inside `//` no longer cause false positives
 - Improved block boundary detection with cleaner internal logic
 - Fixed multi-cursor position restoration when multiple cursors are active
 
