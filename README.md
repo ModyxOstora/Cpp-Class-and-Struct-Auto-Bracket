@@ -148,7 +148,7 @@ Search for **"C++ Class/Struct Auto Bracket"** in the Extensions panel (`Ctrl+Sh
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.7.vsix
+code --install-extension cpp-class-bracket-1.2.8.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -162,6 +162,9 @@ Or drag the `.vsix` file directly into the Extensions panel.
 ---
 
 ## Release Notes
+
+### 1.2.8
+- Fixed multiple cursors on the same empty line below a declaration inserting `{};` inline instead of the correct expanded block in expanded mode
 
 ### 1.2.7
 - Fixed freeze/no-op when multiple cursors are on the same empty line below a declaration — each cursor now correctly gets its own `{};` inserted at its position

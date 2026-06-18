@@ -305,9 +305,10 @@ function activate(context) {
 							targetCharPosition = declarationIndent.length + indentUnit.length;
 						} else {
 							// Multiple cursors on empty line OR cursor on non-empty continuation line
-							// Insert inline at cursor position
-							editBuilder.insert(cursor, '{};');
-							targetCharPosition = cursor.character + 1;
+							// Insert expanded brackets at cursor position
+							editBuilder.insert(cursor, '{\n' + declarationIndent + indentUnit + '\n' + declarationIndent + '};');
+							targetLineNumber = cursor.line + 1;
+							targetCharPosition = declarationIndent.length + indentUnit.length;
 						}
 					}
 				} else {
