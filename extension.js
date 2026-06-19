@@ -384,6 +384,15 @@ function activate(context) {
 		const document = editor.document;
 		const selections = editor.selections;
 
+		// --- NEW FEATURE: The Selection Wrapper ---
+		if (selections.some(s => !s.isEmpty)) {
+			// This single line handles the brackets, the semicolon, preserves the exact 
+			// multi-cursor selections, and ensures Ctrl+Z works in one click!
+			editor.insertSnippet(new vscode.SnippetString('{${1:$TM_SELECTED_TEXT}};'));
+			return;
+		}
+		// ------------------------------------------
+
 		const config = vscode.workspace.getConfiguration('cppClassBracket');
 		const inlineMode = config.get('inlineMode', false);
 		const indentUnit = getIndentUnit(editor);
@@ -461,6 +470,12 @@ function activate(context) {
 		});
 	});
 
+	// Native brace escape hatch: bypass the extension entirely and let VS Code
+	// handle { normally — auto-pairs to {}, positions cursor, no semicolon added.
+	const nativeBraceCommand = vscode.commands.registerCommand('cpp-class-bracket.nativeBrace', () => {
+		vscode.commands.executeCommand('default:type', { text: '{' });
+	});
+
 	const backspaceCommand = vscode.commands.registerCommand('cpp-class-bracket.smartBackspace', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) return;
@@ -525,6 +540,7 @@ function activate(context) {
 	context.subscriptions.push(
 		bracketCommand,
 		forceBracketCommand,
+		nativeBraceCommand,
 		toggleCommand,
 		backspaceCommand,
 		statusBar,

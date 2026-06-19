@@ -110,6 +110,21 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 
 ---
 
+## Selection Wrap
+
+Select any text and press `Shift+Alt+[` to instantly wrap it in `{};`:
+
+```cpp
+// Select "int main()" and press Shift+Alt+[
+// becomes:
+{int main()};
+//          ^ cursor lands here, selection preserved
+```
+
+Works with multi-line selections and multiple cursors simultaneously. Press `Ctrl+Z` once to undo the entire wrap.
+
+---
+
 ## Smart Behavior
 
 - **Forward declarations ignored:** `class Foo;` → native `{` ✅
@@ -133,7 +148,8 @@ class MyClass {x};  ← typed something inside → Backspace → normal backspac
 | Shortcut | Action |
 |---|---|
 | `Shift+[` | Insert `{};` block or native `{` |
-| `Shift+Alt+[` | Force insert a block regardless of declaration detection (respects Inline/Expanded mode) |
+| `Shift+Alt+[` | Force insert a block regardless of declaration detection (respects Inline/Expanded mode), or wrap selected text in `{};` |
+| `Ctrl+Shift+[` | Insert a plain native `{` — bypasses the extension entirely, VS Code handles everything |
 | `Backspace` | Smart delete empty `{};` or normal backspace |
 | `Ctrl+Shift+;` | Toggle inline mode |
 
@@ -148,7 +164,7 @@ Search for **"C++ Class/Struct Auto Bracket"** in the Extensions panel (`Ctrl+Sh
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.10.vsix
+code --install-extension cpp-class-bracket-1.2.11.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -162,6 +178,10 @@ Or drag the `.vsix` file directly into the Extensions panel.
 ---
 
 ## Release Notes
+
+### 1.2.11
+- Added `Ctrl+Shift+[` shortcut — inserts a plain native `{` bypassing the extension entirely, letting VS Code handle auto-pairing and cursor positioning as if the extension didn't exist
+- Added selection wrap to `Shift+Alt+[` — select any text and press the shortcut to wrap it in `{};` with the cursor landing inside, selection preserved, and single `Ctrl+Z` to undo
 
 ### 1.2.9 — 1.2.10
 - Documentation hotfix to sync README versioning

@@ -2,7 +2,7 @@
   "name": "cpp-class-bracket",
   "displayName": "C++ Class/Struct Auto Bracket",
   "description": "Automatically closes class/struct/enum blocks with }; when pressing Shift+[",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {
@@ -35,6 +35,10 @@
         "title": "C++ Auto Bracket: Force Insert Bracket (Override)"
       },
       {
+        "command": "cpp-class-bracket.nativeBrace",
+        "title": "C++ Auto Bracket: Insert Native {"
+      },
+      {
         "command": "cpp-class-bracket.smartBackspace",
         "title": "C++ Auto Bracket: Smart Backspace"
       },
@@ -62,6 +66,11 @@
       {
         "key": "shift+alt+[",
         "command": "cpp-class-bracket.forceInsertClassBracket",
+        "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
+      },
+      {
+        "key": "ctrl+shift+[",
+        "command": "cpp-class-bracket.nativeBrace",
         "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
