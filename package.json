@@ -1,8 +1,8 @@
 {
   "name": "cpp-class-bracket",
-  "displayName": "C++ Class/Struct Auto Bracket",
+  "displayName": "C++ Class/Struct Auto Semicolon & Bracket",
   "description": "Automatically closes class/struct/enum blocks with }; when pressing Shift+[",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {

@@ -1,6 +1,9 @@
 # Change Log
 
-All notable changes to the "C++ Class/Struct Auto Bracket" extension will be documented in this file.
+All notable changes to the "C++ Class/Struct Auto Semicolon & Bracket" extension will be documented in this file.
+
+## [1.2.12]
+- Changing extension's name
 
 ## [1.2.11]
 - Added `Ctrl+Shift+[` shortcut — inserts a plain native `{` bypassing the extension entirely, letting VS Code handle auto-pairing and cursor positioning as if the extension didn't exist

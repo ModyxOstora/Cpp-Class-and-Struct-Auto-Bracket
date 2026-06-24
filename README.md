@@ -1,4 +1,4 @@
-# C++ Class/Struct Auto Bracket
+# C++ Class/Struct Auto Semicolon & Bracket
 
 If you've ever used **Visual Studio Community** and switched to **VS Code**, you probably noticed that VS Code doesn't automatically add a semicolon after the closing `}` of a `class`, `struct`, or `enum`. This extension fixes exactly that — and handles every C++ coding style you can throw at it.
 
@@ -117,8 +117,7 @@ Select any text and press `Shift+Alt+[` to instantly wrap it in `{};`:
 ```cpp
 // Select "int main()" and press Shift+Alt+[
 // becomes:
-{int main()};
-//          ^ cursor lands here, selection preserved
+{int main()|}; // | is the cursor, selection preserved
 ```
 
 Works with multi-line selections and multiple cursors simultaneously. Press `Ctrl+Z` once to undo the entire wrap.
@@ -160,11 +159,11 @@ You can change any of these in `Ctrl+,` → search **"Keyboard Shortcuts"** → 
 ## Installation
 
 ### From the Marketplace
-Search for **"C++ Class/Struct Auto Bracket"** in the Extensions panel (`Ctrl+Shift+X`).
+Search for **"C++ Class/Struct Auto Semicolon & Bracket"** in the Extensions panel (`Ctrl+Shift+X`).
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.11.vsix
+code --install-extension cpp-class-bracket-1.2.12.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -178,6 +177,9 @@ Or drag the `.vsix` file directly into the Extensions panel.
 ---
 
 ## Release Notes
+
+### 1.2.12
+- Changing extension's name
 
 ### 1.2.11
 - Added `Ctrl+Shift+[` shortcut — inserts a plain native `{` bypassing the extension entirely, letting VS Code handle auto-pairing and cursor positioning as if the extension didn't exist

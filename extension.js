@@ -209,7 +209,7 @@ function activate(context) {
 		const config = vscode.workspace.getConfiguration('cppClassBracket');
 		const current = config.get('inlineMode', false);
 		config.update('inlineMode', !current, vscode.ConfigurationTarget.Global).then(() => {
-			vscode.window.showInformationMessage(`C++ Auto Bracket: Inline mode ${!current ? 'ON ✅' : 'OFF ❌'}`);
+			vscode.window.showInformationMessage(`C++ Auto Semicolon & Bracket: Inline mode ${!current ? 'ON ✅' : 'OFF ❌'}`);
 		});
 	});
 
@@ -549,6 +549,7 @@ function activate(context) {
 		vscode.workspace.onDidChangeConfiguration(updateStatusBar),
 	);
 }
+
 
 function deactivate() { }
 module.exports = { activate, deactivate };
