@@ -2,7 +2,7 @@
   "name": "cpp-class-bracket",
   "displayName": "C++ Class/Struct Auto Semicolon & Bracket",
   "description": "Automatically closes class/struct/enum blocks with }; when pressing Shift+[",
-  "version": "1.2.12",
+  "version": "1.2.13",
   "icon": "icon.png",
   "publisher": "MoayadBedair",
   "repository": {
@@ -69,7 +69,7 @@
         "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
-        "key": "ctrl+shift+[",
+        "key": "ctrl+alt+[",
         "command": "cpp-class-bracket.nativeBrace",
         "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
@@ -79,7 +79,7 @@
         "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       },
       {
-        "key": "ctrl+shift+;",
+        "key": "shift+alt+;",
         "command": "cpp-class-bracket.toggleInlineMode",
         "when": "editorTextFocus && (editorLangId == cpp || editorLangId == c)"
       }

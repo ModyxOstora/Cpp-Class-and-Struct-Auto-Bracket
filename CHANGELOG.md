@@ -2,6 +2,10 @@
 
 All notable changes to the "C++ Class/Struct Auto Semicolon & Bracket" extension will be documented in this file.
 
+## [1.2.13]
+- Changed `Insert Native {` shortcut from `Ctrl+Shift+[` to `Ctrl+Alt+[` to prevent conflicts with VS Code's default code folding behavior.
+- Changed `Toggle Inline Mode` shortcut from `Ctrl+Shift+;` to `Shift+Alt+;` to prevent conflicts with the focus breadcrumbs navigation.
+
 ## [1.2.12]
 - Changing extension's name
 

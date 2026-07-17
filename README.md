@@ -94,7 +94,7 @@ Pressing backspace immediately after (before typing anything inside) deletes the
 
 ### Toggle Inline Mode Three Ways
 - Click **`⟨⟩ C++ Expanded`** in the status bar (bottom right)
-- Press `Ctrl+Shift+;`
+- Press `Shift+Alt+;`
 - Go to `Ctrl+,` → search **"C++ Class Bracket"** → check **Inline Mode**
 
 ---
@@ -148,9 +148,9 @@ Works with multi-line selections and multiple cursors simultaneously. Press `Ctr
 |---|---|
 | `Shift+[` | Insert `{};` block or native `{` |
 | `Shift+Alt+[` | Force insert a block regardless of declaration detection (respects Inline/Expanded mode), or wrap selected text in `{};` |
-| `Ctrl+Shift+[` | Insert a plain native `{` — bypasses the extension entirely, VS Code handles everything |
+| `Ctrl+Alt+[` | Insert a plain native `{` — bypasses the extension entirely, VS Code handles everything |
 | `Backspace` | Smart delete empty `{};` or normal backspace |
-| `Ctrl+Shift+;` | Toggle inline mode |
+| `Shift+Alt+;` | Toggle inline mode |
 
 You can change any of these in `Ctrl+,` → search **"Keyboard Shortcuts"** → search the command name.
 
@@ -163,7 +163,7 @@ Search for **"C++ Class/Struct Auto Semicolon & Bracket"** in the Extensions pan
 
 ### From a VSIX file
 ```
-code --install-extension cpp-class-bracket-1.2.12.vsix
+code --install-extension cpp-class-bracket-1.2.13.vsix
 ```
 Or drag the `.vsix` file directly into the Extensions panel.
 
@@ -177,6 +177,10 @@ Or drag the `.vsix` file directly into the Extensions panel.
 ---
 
 ## Release Notes
+
+### 1.2.13
+- Changed `Insert Native {` shortcut to `Ctrl+Alt+[` to prevent conflict with default code folding.
+- Changed `Toggle Inline Mode` shortcut to `Shift+Alt+;` to prevent conflict with focus breadcrumbs.
 
 ### 1.2.12
 - Changing extension's name
